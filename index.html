@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ESG Car Wash — Loyalty</title>
+<link rel="manifest" href="manifest.json">
+
+<!-- ── PWA / Home-screen meta ── -->
+<meta name="apple-mobile-web-app-capable"            content="yes">
+<meta name="apple-mobile-web-app-status-bar-style"   content="black-translucent">
+<meta name="apple-mobile-web-app-title"              content="ESG Rewards">
+<meta name="mobile-web-app-capable"                  content="yes">
+<meta name="theme-color"                             content="#020617">
+<meta name="application-name"                        content="ESG Rewards">
+<link rel="apple-touch-icon" href="https://drive.google.com/thumbnail?sz=w500&id=1ldsE4D9iyiwK5zE2hdweZqGHvIehp336">
+<link rel="manifest" href="manifest.json">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* ================================================================
+   TOKENS & RESET
+================================================================ */
+*, *::before, *::after {
+  box-sizing: border-box; margin: 0; padding: 0;
+  -webkit-tap-highlight-color: transparent;   /* remove grey flash on tap */
+  -webkit-touch-callout: none;                /* disable callout on long-press */
+}
+
+:root {
+  /* core palette */
+  --bg:           #020617;
+  --bg-2:         #0f172a;
+  --accent:       #38bdf8;    /* electric blue — 9-wash cycle */
+  --accent-dim:   rgba(56,189,248,0.13);
+  --accent-glow:  rgba(56,189,248,0.30);
+  --streak:       #10b981;    /* emerald green — monthly streak */
+  --streak-dim:   rgba(16,185,129,0.13);
+  --streak-glow:  rgba(16,185,129,0.30);
+  --gold:         #f59e0b;    /* gold — VIP unlocked */
+  --gold-dim:     rgba(245,158,11,0.15);
+  --gold-glow:    rgba(245,158,11,0.35);
+  --card:         rgba(30,41,59,0.70);
+  --border:       rgba(255,255,255,0.08);
+  --text:         #f1f5f9;
+  --text-2:       #94a3b8;
+  --text-3:       #475569;
+  --ok:           #22c55e;
+  --err:          #ef4444;
+  --font:         'Inter', system-ui, sans-serif;
+  --r-card:       20px;
+}
+
+html { scroll-behavior: smooth; }
+body {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  /* prevent elastic bounce-scroll on iOS */
+  overscroll-behavior: none;
+}
+
+/* Momentum scrolling on all scrollable containers */
+.dash-body, .auth-card, .view {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Minimum 50 px touch target on every interactive element */
+.btn       { min-height: 50px; }
+.tab       { min-height: 44px; }
+.logout-btn, .back-btn, .mgr-logout { min-height: 44px; }
+body::before {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 12% 40%, rgba(56,189,248,0.04) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 60% at 88% 15%, rgba(16,185,129,0.04) 0%, transparent 70%);
+}
+
+/* ================================================================
+   APP SHELL & VIEWS
+================================================================ */
+#app { position: relative; min-height: 100vh; z-index: 1; }
+
+.view {
+  visibility: hidden; opacity: 0;
+  transform: scale(0.975) translateY(8px);
+  transition: opacity .4s ease, transform .4s ease, visibility .4s;
+  position: absolute; top: 0; left: 0; right: 0; min-height: 100vh;
+  pointer-events: none;
+}
+.view.active {
+  visibility: visible; opacity: 1;
+  transform: scale(1) translateY(0);
+  position: relative; pointer-events: all;
+}
+
+/* ================================================================
+   GLASS CARD
+================================================================ */
+.card {
+  background: var(--card);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+}
+
+/* ================================================================
+   BUTTONS
+================================================================ */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 8px; padding: 15px 28px; border-radius: 14px;
+  font-size: 15px; font-weight: 700; cursor: pointer; border: none;
+  transition: transform .2s, box-shadow .2s, opacity .2s;
+  font-family: var(--font); position: relative; overflow: hidden;
+}
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn-primary {
+  background: linear-gradient(135deg,#0ea5e9,#38bdf8);
+  color: #020617; box-shadow: 0 4px 20px var(--accent-glow);
+}
+.btn-primary:not(:disabled):hover  { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(56,189,248,.45); }
+.btn-primary:not(:disabled):active { transform: translateY(0); }
+.btn-ghost {
+  background: var(--card); color: var(--text);
+  border: 1px solid var(--border); backdrop-filter: blur(8px);
+}
+.btn-ghost:not(:disabled):hover { border-color: var(--accent); color: var(--accent); }
+
+@keyframes pulse-glow {
+  0%,100% { box-shadow: 0 4px 20px var(--accent-glow); }
+  50%      { box-shadow: 0 8px 38px rgba(56,189,248,.55); transform: scale(1.015); }
+}
+.btn-pulse { animation: pulse-glow 2.8s ease-in-out infinite; }
+
+/* ================================================================
+   SPINNER
+================================================================ */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner {
+  display: inline-block; width: 18px; height: 18px;
+  border: 2px solid rgba(255,255,255,.2); border-top-color: currentColor;
+  border-radius: 50%; animation: spin .75s linear infinite;
+}
+.btn-primary .spinner { border-top-color:#020617; border-color:rgba(2,6,23,.2); }
+
+/* ================================================================
+   VIEW: WELCOME
+================================================================ */
+#view-welcome {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: 100vh; padding: 48px 28px; text-align: center;
+}
+.welcome-logo {
+  width: 250px; height: auto;
+  filter: drop-shadow(0 0 15px rgba(56,189,248,0.30));
+  margin-bottom: 44px; user-select: none;
+}
+.welcome-headline {
+  font-size: clamp(30px,7vw,48px); font-weight: 900; line-height: 1.15;
+  background: linear-gradient(140deg,#f1f5f9 30%,var(--accent) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text; margin-bottom: 14px;
+}
+.welcome-sub {
+  font-size: 16px; color: var(--text-2); max-width: 300px;
+  line-height: 1.65; margin-bottom: 52px;
+}
+.welcome-cta { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 320px; }
+
+/* ================================================================
+   VIEW: AUTH
+================================================================ */
+#view-auth {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; padding: 40px 24px;
+}
+.auth-card { width: 100%; max-width: 400px; padding: 36px 32px; }
+
+.back-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: none; border: none; color: var(--text-2);
+  font-size: 14px; cursor: pointer; margin-bottom: 28px;
+  padding: 0; transition: color .2s; font-family: var(--font);
+}
+.back-btn:hover { color: var(--accent); }
+.back-btn svg { transition: transform .2s; }
+.back-btn:hover svg { transform: translateX(-3px); }
+
+.auth-tabs {
+  display: flex; gap: 4px;
+  background: rgba(15,23,42,.9); border-radius: 11px;
+  padding: 4px; margin-bottom: 30px;
+}
+.tab {
+  flex: 1; padding: 10px; border: none; border-radius: 8px;
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: all .2s; background: transparent;
+  color: var(--text-2); font-family: var(--font);
+}
+.tab.on { background: var(--accent); color: #020617; }
+
+.auth-section { display: none; }
+.auth-section.on { display: block; }
+
+.auth-title { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+.auth-sub   { font-size: 14px; color: var(--text-2); margin-bottom: 28px; line-height: 1.55; }
+
+.field { margin-bottom: 18px; }
+.field label {
+  display: block; font-size: 11px; font-weight: 700;
+  color: var(--text-2); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 8px;
+}
+.field input {
+  width: 100%; padding: 14px 16px;
+  background: rgba(15,23,42,.85); border: 1px solid var(--border);
+  border-radius: 12px; color: var(--text); font-size: 16px;
+  outline: none; transition: border-color .2s, box-shadow .2s; font-family: var(--font);
+}
+.field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(56,189,248,.12); }
+.field input::placeholder { color: var(--text-3); }
+.field-err { font-size: 12px; color: var(--err); margin-top: 7px; display: none; }
+.field-err.show { display: block; }
+
+/* ================================================================
+   DASHBOARD — HEADER
+================================================================ */
+.dash-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 22px;
+  background: rgba(2,6,23,.92);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 100;
+}
+.header-logo {
+  width: 100px; height: auto;
+  filter: drop-shadow(0 0 8px var(--accent-glow));
+  cursor: pointer; user-select: none; -webkit-user-select: none;
+}
+.header-right { display: flex; align-items: center; gap: 12px; }
+.uid-chip {
+  font-size: 11px; font-weight: 700; color: var(--accent);
+  letter-spacing: .07em; padding: 5px 12px;
+  background: var(--accent-dim); border-radius: 100px;
+}
+.logout-btn {
+  padding: 7px 15px; border-radius: 9px;
+  background: transparent; border: 1px solid var(--border);
+  color: var(--text-2); font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all .2s; font-family: var(--font);
+}
+.logout-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ================================================================
+   DASHBOARD — BODY
+================================================================ */
+.dash-body { padding: 24px; max-width: 480px; margin: 0 auto; }
+
+.greeting { margin-bottom: 26px; }
+.greeting-label { font-size: 12px; color: var(--text-2); font-weight: 600; letter-spacing: .07em; text-transform: uppercase; }
+.greeting-name  { font-size: 28px; font-weight: 800; margin-top: 3px; }
+
+.section-label {
+  font-size: 11px; font-weight: 700; color: var(--text-2);
+  text-transform: uppercase; letter-spacing: .09em; margin-bottom: 20px;
+}
+
+/* ── 9-Wash Cycle Tracker (Blue) ── */
+.tracker-card { padding: 24px 20px; margin-bottom: 16px; }
+
+.step-row { display: flex; align-items: center; width: 100%; }
+.step-node { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; }
+
+.step-dot {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: rgba(71,85,105,.35); border: 2px solid var(--text-3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: var(--text-3);
+  transition: background .4s, border-color .4s, box-shadow .4s, color .4s;
+  position: relative; z-index: 2;
+}
+.step-dot.done {
+  background: linear-gradient(135deg,#0ea5e9,#38bdf8);
+  border-color: var(--accent); color: #020617;
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+.step-dot.now { border-color: var(--accent); box-shadow: 0 0 0 5px rgba(56,189,248,.12), 0 0 10px var(--accent-glow); }
+
+.step-line { flex: 1; height: 2px; background: var(--text-3); transition: background .4s; }
+.step-line.done { background: linear-gradient(90deg,#0ea5e9,#38bdf8); }
+
+.gift-dot {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: rgba(71,85,105,.35); border: 2px solid var(--text-3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; transition: background .4s, border-color .4s, box-shadow .4s;
+}
+@keyframes gift-pulse {
+  0%,100% { box-shadow: 0 0 10px rgba(245,158,11,.5), 0 0 24px rgba(245,158,11,.25); }
+  50%      { box-shadow: 0 0 18px rgba(245,158,11,.8), 0 0 40px rgba(245,158,11,.45); }
+}
+.gift-dot.lit { background: linear-gradient(135deg,#f59e0b,#fbbf24); border-color: #f59e0b; animation: gift-pulse 2s ease-in-out infinite; }
+
+.reward-banner {
+  display: none; align-items: center; justify-content: center;
+  gap: 10px; padding: 11px 20px;
+  background: linear-gradient(135deg,rgba(245,158,11,.15),rgba(252,211,77,.08));
+  border: 1px solid rgba(245,158,11,.35); border-radius: 100px;
+  font-size: 13px; font-weight: 700; color: #fbbf24; margin-top: 20px;
+}
+.reward-banner.show { display: flex; }
+
+.stat-row { display: flex; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px; }
+.stat { flex: 1; text-align: center; }
+.stat + .stat { border-left: 1px solid var(--border); }
+.stat-val { font-size: 24px; font-weight: 800; color: var(--accent); }
+.stat-lbl { font-size: 10px; color: var(--text-2); text-transform: uppercase; letter-spacing: .07em; margin-top: 2px; }
+
+/* ── Monthly Streak Card (Emerald) ── */
+.streak-card { padding: 24px 20px; margin-bottom: 16px; }
+.streak-section-label { /* override color for streak */
+  font-size: 11px; font-weight: 700; color: #34d399;
+  text-transform: uppercase; letter-spacing: .09em; margin-bottom: 20px;
+}
+
+.streak-row { display: flex; align-items: center; width: 100%; margin-bottom: 18px; }
+.streak-node { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; }
+
+.streak-dot {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: rgba(71,85,105,.35); border: 2px solid var(--text-3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; transition: all .4s;
+}
+.streak-dot.done {
+  background: linear-gradient(135deg,#059669,#10b981);
+  border-color: var(--streak); box-shadow: 0 0 10px var(--streak-glow);
+}
+@keyframes streak-pulse {
+  0%,100% { box-shadow: 0 0 10px var(--streak-glow), 0 0 24px rgba(16,185,129,.2); }
+  50%      { box-shadow: 0 0 18px rgba(16,185,129,.7), 0 0 40px rgba(16,185,129,.4); }
+}
+.streak-dot.done.now { animation: streak-pulse 2.2s ease-in-out infinite; }
+
+.streak-line { flex: 1; height: 2px; background: var(--text-3); transition: background .4s; }
+.streak-line.done { background: linear-gradient(90deg,#059669,#10b981); }
+
+/* VIP unlocked badge */
+.vip-badge {
+  display: none; align-items: center; justify-content: center;
+  gap: 10px; padding: 14px 20px;
+  background: linear-gradient(135deg,rgba(245,158,11,.18),rgba(251,191,36,.08));
+  border: 1px solid rgba(245,158,11,.45); border-radius: 14px;
+  margin-top: 4px;
+}
+.vip-badge.show { display: flex; }
+
+@keyframes vip-glow {
+  0%,100% { box-shadow: 0 0 14px rgba(245,158,11,.3), 0 0 32px rgba(245,158,11,.15); }
+  50%      { box-shadow: 0 0 24px rgba(245,158,11,.55), 0 0 48px rgba(245,158,11,.3); }
+}
+.vip-badge.show { animation: vip-glow 2.5s ease-in-out infinite; }
+
+.vip-icon { font-size: 26px; }
+.vip-text-wrap { display: flex; flex-direction: column; gap: 2px; }
+.vip-title { font-size: 14px; font-weight: 800; color: #fbbf24; letter-spacing: .04em; }
+.vip-sub   { font-size: 11px; color: rgba(251,191,36,.75); font-weight: 500; }
+
+/* Progress label row */
+.streak-info-row {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 13px; color: var(--text-2); margin-top: 4px;
+}
+.streak-count { font-weight: 700; color: #34d399; font-size: 15px; }
+
+/* ── QR Card ── */
+.qr-card { padding: 28px 24px; text-align: center; margin-bottom: 16px; }
+.qr-wrap { width: 170px; height: 170px; margin: 0 auto 20px; border-radius: 14px; overflow: hidden; background: #fff; padding: 8px; }
+.qr-img  { width: 100%; height: 100%; object-fit: contain; display: block; }
+.qr-uid  { font-size: 20px; font-weight: 900; color: var(--accent); letter-spacing: .08em; }
+.qr-divider { width: 52px; height: 2px; background: linear-gradient(90deg,transparent,var(--accent),transparent); margin: 14px auto; }
+.qr-since { font-size: 13px; color: var(--text-2); margin-bottom: 14px; }
+
+.status-pill {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 16px; border-radius: 100px;
+  font-size: 12px; font-weight: 700; letter-spacing: .05em;
+}
+.status-active { background: rgba(34,197,94,.12); border: 1px solid rgba(34,197,94,.3); color: #4ade80; }
+.status-reward { background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.3); color: #fbbf24; }
+.status-pip { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+/* ── Recent Activity / Wash History ── */
+.history-card { padding: 24px 20px; margin-bottom: 20px; }
+
+.history-list { display: flex; flex-direction: column; gap: 0; }
+
+.history-item {
+  display: flex; align-items: center; gap: 14px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border);
+  transition: opacity .2s;
+}
+.history-item:last-child { border-bottom: none; }
+
+.hist-icon {
+  width: 36px; height: 36px; border-radius: 10px; flex: 0 0 36px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+}
+.hist-icon-standard { background: var(--accent-dim); }
+.hist-icon-reward   { background: var(--gold-dim); }
+
+.hist-text  { flex: 1; }
+.hist-type  { font-size: 14px; font-weight: 600; color: var(--text); }
+.hist-time  { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+
+.hist-badge {
+  font-size: 10px; font-weight: 700; letter-spacing: .06em;
+  padding: 3px 9px; border-radius: 100px; text-transform: uppercase;
+}
+.hist-badge-reward { background: var(--gold-dim); border: 1px solid rgba(245,158,11,.3); color: #fbbf24; }
+
+.history-empty {
+  text-align: center; padding: 28px 16px;
+  color: var(--text-3); font-size: 14px; line-height: 1.6;
+}
+.history-empty-icon { font-size: 32px; margin-bottom: 10px; }
+
+/* ================================================================
+   SKELETON LOADER
+================================================================ */
+@keyframes shimmer {
+  0%   { background-position: -300% 0; }
+  100% { background-position:  300% 0; }
+}
+.sk {
+  background: linear-gradient(90deg,
+    rgba(30,41,59,.9) 25%, rgba(56,189,248,.07) 50%, rgba(30,41,59,.9) 75%
+  );
+  background-size: 300% 100%;
+  animation: shimmer 1.9s ease-in-out infinite;
+  border-radius: 8px;
+}
+.sk-title  { height: 30px; width: 50%; margin-bottom: 24px; }
+.sk-card-s { height: 130px; border-radius: 18px; margin-bottom: 14px; }
+.sk-card-m { height: 160px; border-radius: 18px; margin-bottom: 14px; }
+.sk-card-l { height: 220px; border-radius: 18px; margin-bottom: 14px; }
+.sk-qr-box { width: 160px; height: 160px; border-radius: 14px; margin: 0 auto 18px; }
+.sk-line   { height: 14px; margin: 0 auto 8px; }
+
+#view-dashboard.loading      .dash-real { display: none; }
+#view-dashboard:not(.loading) .dash-skel { display: none; }
+
+/* ================================================================
+   TOAST
+================================================================ */
+#toasts {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  z-index: 9999; display: flex; flex-direction: column; gap: 8px;
+  align-items: center; pointer-events: none; width: 90%; max-width: 360px;
+}
+.toast {
+  width: 100%; padding: 13px 20px; border-radius: 13px;
+  font-size: 14px; font-weight: 600; text-align: center;
+  backdrop-filter: blur(14px);
+  opacity: 0; transform: translateY(16px);
+  transition: opacity .3s, transform .3s; pointer-events: all;
+}
+.toast.in  { opacity: 1; transform: translateY(0); }
+.toast-ok  { background: rgba(34,197,94,.18);  border: 1px solid rgba(34,197,94,.35);  color: #4ade80; }
+.toast-err { background: rgba(239,68,68,.18);   border: 1px solid rgba(239,68,68,.35);   color: #f87171; }
+.toast-inf { background: rgba(56,189,248,.13);  border: 1px solid rgba(56,189,248,.3);   color: var(--accent); }
+.toast-wow { background: rgba(245,158,11,.18);  border: 1px solid rgba(245,158,11,.35);  color: #fbbf24; font-size: 16px; }
+.toast-str { background: rgba(16,185,129,.18);  border: 1px solid rgba(16,185,129,.35);  color: #34d399; font-size: 15px; }
+
+/* ================================================================
+   ADMIN PANEL
+================================================================ */
+#admin-panel { position: fixed; bottom: 80px; right: 22px; z-index: 900; display: none; }
+#admin-panel.show { display: block; }
+.admin-btn {
+  display: flex; align-items: center; gap: 8px; padding: 12px 18px; border-radius: 13px;
+  background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.3);
+  color: #f87171; font-size: 13px; font-weight: 700; cursor: pointer;
+  backdrop-filter: blur(12px); transition: all .2s; font-family: var(--font);
+}
+.admin-btn:hover { background: rgba(239,68,68,.22); }
+
+/* ================================================================
+   RESPONSIVE
+================================================================ */
+@media (max-width: 380px) {
+  .step-dot   { width: 24px; height: 24px; font-size: 9px; }
+  .gift-dot   { width: 28px; height: 28px; font-size: 14px; }
+  .streak-dot { width: 28px; height: 28px; font-size: 13px; }
+  .dash-body  { padding: 16px; }
+  .auth-card  { padding: 28px 20px; }
+}
+
+/* Landscape: shrink welcome logo so it fits without scrolling */
+@media (max-height: 500px) and (orientation: landscape) {
+  .welcome-logo      { width: 120px; margin-bottom: 20px; }
+  .welcome-headline  { font-size: 22px; margin-bottom: 8px; }
+  .welcome-sub       { margin-bottom: 24px; font-size: 14px; }
+  #view-welcome      { padding: 24px 28px 80px; justify-content: flex-start; padding-top: 40px; }
+  .header-logo       { width: 70px; }
+}
+
+@media (orientation: landscape) {
+  /* Keep header logo centred vertically in the sticky bar */
+  .dash-header  { align-items: center; }
+  .header-logo  { width: 80px; }
+}
+
+/* ================================================================
+   INSTALL BANNER
+================================================================ */
+#install-banner {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 8000;
+  padding: 16px 20px 24px;          /* extra bottom for home-bar */
+  background: rgba(15, 23, 42, 0.82);
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  border-top: 1px solid rgba(255,255,255,0.14);
+  box-shadow: 0 -4px 32px rgba(0,0,0,0.5);
+
+  /* start below the fold */
+  transform: translateY(110%);
+  opacity: 0;
+  transition: transform .48s cubic-bezier(.22,.68,0,1.2), opacity .4s ease;
+  pointer-events: none;
+}
+#install-banner.visible {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: all;
+}
+
+.banner-inner {
+  display: flex; align-items: flex-start; gap: 14px;
+  max-width: 480px; margin: 0 auto;
+  position: relative;
+}
+.banner-app-icon {
+  width: 52px; height: 52px; border-radius: 12px; flex: 0 0 52px;
+  overflow: hidden; border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+.banner-app-icon img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.banner-copy { flex: 1; }
+.banner-title {
+  font-size: 14px; font-weight: 800; color: var(--text);
+  margin-bottom: 5px; line-height: 1.3;
+}
+.banner-body {
+  font-size: 12px; color: var(--text-2); line-height: 1.55;
+}
+.banner-share-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; border-radius: 5px; vertical-align: middle;
+  background: rgba(56,189,248,0.18); border: 1px solid rgba(56,189,248,0.35);
+  margin: 0 2px;
+}
+.banner-share-icon svg { width: 11px; height: 11px; }
+
+.banner-close {
+  position: absolute; top: -2px; right: 0;
+  width: 28px; height: 28px; border-radius: 50%;
+  background: rgba(71,85,105,0.5); border: 1px solid rgba(255,255,255,0.1);
+  color: var(--text-2); font-size: 16px; line-height: 1;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background .2s, color .2s; flex: 0 0 28px;
+}
+.banner-close:hover { background: rgba(239,68,68,.3); color: #f87171; }
+
+/* Ensure the welcome screen has room above the banner */
+#view-welcome { padding-bottom: 120px; }
+</style>
+</head>
+<body>
+<!-- ── Install Banner (shown only in browser, not standalone) ── -->
+<div id="install-banner" role="complementary" aria-label="Install app banner">
+  <div class="banner-inner">
+    <div class="banner-app-icon">
+      <img src="https://drive.google.com/thumbnail?sz=w500&id=1ldsE4D9iyiwK5zE2hdweZqGHvIehp336" alt="ESG">
+    </div>
+    <div class="banner-copy">
+      <div class="banner-title">✨ Install ESG Rewards for VIP Access!</div>
+      <div class="banner-body">
+        Tap the
+        <span class="banner-share-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
+          </svg>
+        </span>
+        <strong>Share</strong> icon then <strong>"Add to Home Screen"</strong> to never lose your rewards progress.
+      </div>
+    </div>
+    <button class="banner-close" onclick="dismissBanner()" aria-label="Dismiss">×</button>
+  </div>
+</div>
+
+<div id="app">
+
+<div id="toasts"></div>
+<div id="admin-panel">
+  <button class="admin-btn" onclick="adminAddWash()">🔧 Record Test Wash</button>
+</div>
+
+<!-- ================================================================
+     VIEW: WELCOME
+================================================================ -->
+<div id="view-welcome" class="view active">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:48px 28px;text-align:center;">
+    <img src="https://drive.google.com/thumbnail?sz=w1000&id=1ldsE4D9iyiwK5zE2hdweZqGHvIehp336"
+         alt="ESG Car Wash" class="welcome-logo" draggable="false">
+    <h1 class="welcome-headline">Drive Clean.<br>Earn More.</h1>
+    <p class="welcome-sub">Your premium car wash loyalty program — every wash brings you closer to a free one.</p>
+    <div class="welcome-cta">
+      <button class="btn btn-primary btn-pulse" onclick="goAuth('login')">✦ &nbsp;Sign In</button>
+      <button class="btn btn-ghost" onclick="goAuth('register')">Create Account</button>
+    </div>
+    <!-- Hidden manager link — low contrast, not obvious to customers -->
+    <span
+      id="mgr-link"
+      onclick="openManagerPortal()"
+      style="position:absolute;bottom:18px;right:22px;font-size:10px;color:rgba(71,85,105,0.4);cursor:pointer;user-select:none;letter-spacing:.05em;"
+      title=""
+    >staff</span>
+  </div>
+</div>
+
+<!-- ================================================================
+     VIEW: AUTH
+================================================================ -->
+<div id="view-auth" class="view">
+  <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;padding:40px 24px;">
+    <div class="card auth-card">
+      <button class="back-btn" onclick="showView('view-welcome')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        Back
+      </button>
+      <div class="auth-tabs">
+        <button class="tab on" id="tab-login"    onclick="authMode('login')">Sign In</button>
+        <button class="tab"    id="tab-register" onclick="authMode('register')">Register</button>
+      </div>
+
+      <!-- Login -->
+      <div class="auth-section on" id="sec-login">
+        <div class="auth-title">Welcome back</div>
+        <div class="auth-sub">Enter your phone number to access your dashboard.</div>
+        <div class="field">
+          <label for="l-phone">Phone Number</label>
+          <input type="tel" id="l-phone" placeholder="555 000 000"
+                 autocomplete="tel" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="tel">
+          <div class="field-err" id="l-err"></div>
+        </div>
+        <button class="btn btn-primary" style="width:100%" id="btn-login" onclick="doLogin()">Sign In</button>
+      </div>
+
+      <!-- Register -->
+      <div class="auth-section" id="sec-register">
+        <div class="auth-title">Join the club</div>
+        <div class="auth-sub">Create your loyalty account and start earning rewards today.</div>
+        <div class="field">
+          <label for="r-name">Full Name</label>
+          <input type="text" id="r-name" placeholder="John Smith"
+                 autocomplete="name" autocorrect="off" spellcheck="false">
+        </div>
+        <div class="field">
+          <label for="r-phone">Phone Number</label>
+          <input type="tel" id="r-phone" placeholder="555 000 000"
+                 autocomplete="tel" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="tel">
+          <div class="field-err" id="r-err"></div>
+        </div>
+        <button class="btn btn-primary" style="width:100%" id="btn-reg" onclick="doRegister()">Create Account</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================
+     VIEW: DASHBOARD
+================================================================ -->
+<div id="view-dashboard" class="view loading">
+
+  <!-- Header (always visible) -->
+  <header class="dash-header">
+    <img src="https://drive.google.com/thumbnail?sz=w1000&id=1ldsE4D9iyiwK5zE2hdweZqGHvIehp336"
+         alt="ESG" class="header-logo" id="header-logo" draggable="false">
+    <div class="header-right">
+      <span class="uid-chip" id="h-uid"></span>
+      <button class="logout-btn" onclick="doLogout()">Logout</button>
+    </div>
+  </header>
+
+  <!-- ── Skeleton ── -->
+  <div class="dash-skel" style="padding:24px;max-width:480px;margin:0 auto">
+    <div class="sk sk-title"></div>
+    <div class="sk sk-card-s"></div>
+    <div class="sk sk-card-s"></div>
+    <div class="card" style="padding:26px;margin-bottom:14px;text-align:center">
+      <div class="sk sk-qr-box"></div>
+      <div class="sk sk-line" style="width:38%;margin-bottom:8px"></div>
+      <div class="sk sk-line" style="width:55%"></div>
+    </div>
+    <div class="sk sk-card-m"></div>
+  </div>
+
+  <!-- ── Real Content ── -->
+  <div class="dash-real dash-body">
+
+    <!-- Greeting -->
+    <div class="greeting">
+      <div class="greeting-label">Welcome back</div>
+      <div class="greeting-name" id="g-name"></div>
+    </div>
+
+    <!-- 9-Wash Cycle Tracker -->
+    <div class="card tracker-card">
+      <div class="section-label">Wash Progress — Free Wash Cycle</div>
+      <div class="step-row" id="step-row"></div>
+      <div class="reward-banner" id="reward-banner">🎁 &nbsp;Free Wash Reward Available!</div>
+      <div class="stat-row">
+        <div class="stat">
+          <div class="stat-val" id="s-total">0</div>
+          <div class="stat-lbl">Lifetime</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val" id="s-cycle">0</div>
+          <div class="stat-lbl">This Cycle</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val" id="s-left">9</div>
+          <div class="stat-lbl">Until Free</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Monthly Streak Card -->
+    <div class="card streak-card">
+      <div class="streak-section-label">✦ Monthly Streak — VIP Interior Cleaning</div>
+      <div class="streak-row" id="streak-row"></div>
+
+      <!-- Progress label (hidden when VIP unlocked) -->
+      <div class="streak-info-row" id="streak-info-row">
+        <span id="streak-info-text">0 of 4 washes this month</span>
+        <span class="streak-count" id="streak-count">0/4</span>
+      </div>
+
+      <!-- VIP Unlocked badge (hidden by default) -->
+      <div class="vip-badge" id="vip-badge">
+        <span class="vip-icon">👑</span>
+        <div class="vip-text-wrap">
+          <div class="vip-title">VIP REWARD UNLOCKED</div>
+          <div class="vip-sub">Interior Cleaning — Ready to Redeem</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- QR Identity Card -->
+    <div class="card qr-card">
+      <div class="section-label">Member Card</div>
+      <div class="qr-wrap"><img id="qr-img" class="qr-img" src="" alt="QR Code"></div>
+      <div class="qr-uid"   id="qr-uid"></div>
+      <div class="qr-divider"></div>
+      <div class="qr-since" id="qr-since"></div>
+      <span class="status-pill status-active" id="status-pill">
+        <span class="status-pip"></span>
+        <span id="status-txt">Active Member</span>
+      </span>
+    </div>
+
+    <!-- Recent Activity / Wash History -->
+    <div class="card history-card">
+      <div class="section-label">Recent Activity</div>
+      <div class="history-list" id="history-list"></div>
+    </div>
+
+  </div><!-- end dash-real -->
+</div><!-- end view-dashboard -->
+
+</div><!-- end #app -->
+
+<script>
+/* ================================================================
+   API — Google Apps Script backend URL
+================================================================ */
+const API_URL = 'https://script.google.com/macros/s/AKfycbwrJGdcEtmndiQtLjGXWumSH0elfXLbZnZvjkWgu-mtgh6hQ-pOjDvq9Ei0Z8YMqZZV/exec';
+
+function api(data) {
+  // POST with text/plain avoids CORS preflight while still sending JSON
+  return fetch(API_URL, {
+    method:   'POST',
+    headers:  { 'Content-Type': 'text/plain;charset=utf-8' },
+    body:     JSON.stringify(data),
+    redirect: 'follow'
+  })
+  .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+  .catch(err => { L.error('api', err); throw err; });
+}
+
+/* ================================================================
+   LOGGER
+================================================================ */
+class Logger {
+  constructor(tag='ESG'){ this.tag=tag; this._l=[]; }
+  _ts(){ return new Date().toISOString().slice(11,23); }
+  _p(lv,...a){ this._l.push({lv,a,t:this._ts()}); return `[${this.tag}][${this._ts()}][${lv}]`; }
+  log(...a)  { console.log(this._p('INFO',...a),...a); }
+  warn(...a) { console.warn(this._p('WARN',...a),...a); }
+  error(...a){ console.error(this._p('ERR',...a),...a); }
+  dump()     { return this._l; }
+}
+const L = new Logger('ESG');
+
+/* ================================================================
+   APP STATE
+================================================================ */
+const App = {
+  user:  null,
+  stats: null,
+  view:  'view-welcome',
+  set(u, s){ this.user=u; this.stats=s||{lifetimeTotal:0,monthlyStreak:0,history:[]}; L.log('state set',u?.userID); },
+  clear(){ this.user=null; this.stats=null; L.log('state cleared'); }
+};
+
+/* ================================================================
+   VIEW TRANSITIONS
+================================================================ */
+function showView(id) {
+  const cur  = document.querySelector('.view.active');
+  const next = document.getElementById(id);
+  if (!next || cur===next) return;
+  if (cur) cur.classList.remove('active');
+  App.view = id;
+  requestAnimationFrame(()=>{ next.classList.add('active'); window.scrollTo({top:0}); });
+}
+function goAuth(mode){ showView('view-auth'); setTimeout(()=>authMode(mode),80); }
+
+/* ================================================================
+   AUTH TABS
+================================================================ */
+function authMode(mode){
+  ['login','register'].forEach(m=>{
+    document.getElementById('tab-'+m).classList.toggle('on', m===mode);
+    document.getElementById('sec-'+m).classList.toggle('on', m===mode);
+  });
+  setTimeout(()=>{ const f=document.querySelector('#sec-'+mode+' input'); if(f) f.focus(); },150);
+}
+
+/* ================================================================
+   PHONE FORMATTER  (Georgian 9-digit primary, intl overflow)
+================================================================ */
+function fmtPhone(inp){
+  let d=inp.value.replace(/\D/g,'');
+  let s='';
+  if(d.length>0) s=d.slice(0,3);
+  if(d.length>=4) s+=' '+d.slice(3,6);
+  if(d.length>=7) s+=' '+d.slice(6,9);
+  if(d.length>9)  s+=' '+d.slice(9);
+  inp.value=s;
+}
+document.getElementById('l-phone').addEventListener('input',function(){fmtPhone(this);});
+document.getElementById('r-phone').addEventListener('input',function(){fmtPhone(this);});
+document.getElementById('l-phone').addEventListener('keypress',e=>{ if(e.key==='Enter') doLogin(); });
+document.getElementById('r-name' ).addEventListener('keypress',e=>{ if(e.key==='Enter') document.getElementById('r-phone').focus(); });
+document.getElementById('r-phone').addEventListener('keypress',e=>{ if(e.key==='Enter') doRegister(); });
+
+/* ================================================================
+   HELPERS
+================================================================ */
+function showErr(id,msg){
+  const el=document.getElementById(id); if(!el) return;
+  el.textContent=msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),4500);
+}
+function clearErrs(){ document.querySelectorAll('.field-err').forEach(e=>e.classList.remove('show')); }
+
+function setBtnLoading(id,on){
+  const b=document.getElementById(id); if(!b) return;
+  if(on){ b.disabled=true; b._orig=b.innerHTML; b.innerHTML='<span class="spinner"></span> Loading…'; }
+  else  { b.disabled=false; b.innerHTML=b._orig||'Submit'; }
+}
+
+function toast(msg,type='inf',dur=3500){
+  const c=document.getElementById('toasts');
+  const t=document.createElement('div');
+  t.className=`toast toast-${type}`; t.textContent=msg;
+  c.appendChild(t);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('in')));
+  setTimeout(()=>{ t.classList.remove('in'); setTimeout(()=>t.remove(),320); },dur);
+}
+
+/* ================================================================
+   AUTH HANDLERS
+================================================================ */
+function doLogin(){
+  clearErrs();
+  const inp=document.getElementById('l-phone');
+  const raw=inp.value.replace(/\D/g,'');
+  if(raw.length<7){ showErr('l-err','Please enter a valid phone number.'); return; }
+  setBtnLoading('btn-login',true);
+  L.log('login',raw);
+  api({action:'fetchUser', phone:inp.value})
+    .then(r=>{
+      setBtnLoading('btn-login',false);
+      L.log('login result',r);
+      if(!r.success){ showErr('l-err',r.message||'Error. Please try again.'); return; }
+      if(!r.found)  { showErr('l-err','No account found. Please register first.'); return; }
+      App.set(r.user, r.stats);
+      loadDash(r.user, r.stats);
+    })
+    .catch(e=>{ setBtnLoading('btn-login',false); L.error('login err',e); showErr('l-err','Connection error. Please try again.'); });
+}
+
+function doRegister(){
+  clearErrs();
+  const name=document.getElementById('r-name').value.trim();
+  const pInp=document.getElementById('r-phone');
+  const raw=pInp.value.replace(/\D/g,'');
+  if(name.length<2){ showErr('r-err','Please enter your full name.'); return; }
+  if(raw.length<7) { showErr('r-err','Please enter a valid phone number.'); return; }
+  setBtnLoading('btn-reg',true);
+  L.log('register',name,raw);
+  api({action:'registerUser', fullName:name, phone:pInp.value})
+    .then(r=>{
+      setBtnLoading('btn-reg',false);
+      L.log('register result',r);
+      if(!r.success){ showErr('r-err',r.message||'Registration failed.'); return; }
+      toast('Welcome to ESG Car Wash! 🚗','ok',4000);
+      App.set(r.user, r.stats);
+      loadDash(r.user, r.stats);
+    })
+    .catch(e=>{ setBtnLoading('btn-reg',false); L.error('register err',e); showErr('r-err','Connection error. Please try again.'); });
+}
+
+function doLogout(){
+  App.clear();
+  ['l-phone','r-name','r-phone'].forEach(id=>{ document.getElementById(id).value=''; });
+  document.getElementById('admin-panel').classList.remove('show');
+  adminPressCount=0;
+  showView('view-welcome');
+  toast('Signed out.','inf',2000);
+}
+
+/* ================================================================
+   DASHBOARD — LOAD & RENDER
+================================================================ */
+function loadDash(user, stats){
+  const v=document.getElementById('view-dashboard');
+  v.classList.add('loading');
+  showView('view-dashboard');
+  // Skeleton stays visible for at least 640ms for smoothness
+  setTimeout(()=>{ renderDash(user, stats); v.classList.remove('loading'); }, 640);
+}
+
+function renderDash(u, s){
+  L.log('render dash', u.userID, s);
+  const stats = s || { lifetimeTotal:0, monthlyStreak:0, history:[] };
+
+  // Header
+  document.getElementById('h-uid').textContent = u.userID;
+
+  // Greeting
+  document.getElementById('g-name').textContent = u.fullName.split(' ')[0];
+
+  // ── 9-Wash Cycle ──────────────────────────────────────────
+  const cycle    = parseInt(u.currentCycle) || 0;
+  const isReward = u.memberStatus === 'Reward Available';
+  const total    = stats.lifetimeTotal || parseInt(u.totalWashes) || 0;
+  const left     = isReward ? 0 : Math.max(0, 9 - cycle);
+
+  document.getElementById('s-total').textContent = total;
+  document.getElementById('s-cycle').textContent = cycle;
+  document.getElementById('s-left').textContent  = left;
+
+  buildCycleSteps(cycle, isReward);
+  document.getElementById('reward-banner').classList.toggle('show', isReward);
+
+  // Status pill
+  const pill=document.getElementById('status-pill');
+  const txt =document.getElementById('status-txt');
+  pill.className='status-pill '+(isReward?'status-reward':'status-active');
+  txt.textContent = isReward ? '🎁 Reward Available' : 'Active Member';
+
+  // ── Monthly Streak ────────────────────────────────────────
+  buildStreakRow(stats.monthlyStreak || 0, stats.monthlyRewardRedeemed || false);
+
+  // ── QR Card ───────────────────────────────────────────────
+  document.getElementById('qr-img').src =
+    'https://api.qrserver.com/v1/create-qr-code/?size=250x250&bgcolor=ffffff&color=020617&margin=4&data='
+    + encodeURIComponent(u.userID);
+  document.getElementById('qr-uid').textContent = u.userID;
+
+  let since = u.memberSince ? 'Member since ' + u.memberSince : '';
+  document.getElementById('qr-since').textContent = since;
+
+  // ── Wash History ─────────────────────────────────────────
+  renderHistory(stats.history || []);
+}
+
+/* ================================================================
+   9-WASH STEP INDICATOR (Blue)
+================================================================ */
+function buildCycleSteps(cycle, isReward){
+  const row=document.getElementById('step-row');
+  row.innerHTML='';
+  for(let i=1;i<=9;i++){
+    const done=(i<=cycle), now=(i===cycle&&!isReward);
+    const node=document.createElement('div'); node.className='step-node';
+    const dot=document.createElement('div');
+    dot.className='step-dot'+(done?' done':'')+(now?' now':'');
+    dot.textContent=i;
+    node.appendChild(dot); row.appendChild(node);
+    const line=document.createElement('div');
+    line.className='step-line'+(i<cycle?' done':''); line.style.flex='1';
+    row.appendChild(line);
+  }
+  const lastLine=document.createElement('div');
+  lastLine.className='step-line'+(isReward?' done':''); lastLine.style.flex='1';
+  row.appendChild(lastLine);
+  const gn=document.createElement('div'); gn.className='step-node';
+  const g=document.createElement('div');
+  g.className='gift-dot'+(isReward?' lit':''); g.textContent='🎁';
+  gn.appendChild(g); row.appendChild(gn);
+}
+
+/* ================================================================
+   MONTHLY STREAK ROW (Emerald — 4 milestones)
+================================================================ */
+function buildStreakRow(monthCount, rewardRedeemed){
+  const GOAL = 4;
+  const row  = document.getElementById('streak-row');
+  row.innerHTML = '';
+
+  // When reward is claimed, dots visually reset to 0
+  const displayCount = rewardRedeemed ? 0 : Math.min(monthCount, GOAL);
+
+  for(let i=1; i<=GOAL; i++){
+    const done   = i <= displayCount;
+    const isLast = i === GOAL;
+
+    const node = document.createElement('div'); node.className='streak-node';
+    const dot  = document.createElement('div');
+    dot.className = 'streak-dot' + (done ? ' done' + (displayCount===i?' now':'') : '');
+    dot.textContent = done ? (isLast ? '👑' : '✦') : (isLast ? '👑' : i);
+    node.appendChild(dot);
+    row.appendChild(node);
+
+    if(i < GOAL){
+      const line=document.createElement('div');
+      line.className='streak-line'+(i<displayCount?' done':''); line.style.flex='1';
+      row.appendChild(line);
+    }
+  }
+
+  const infoRow  = document.getElementById('streak-info-row');
+  const infoTxt  = document.getElementById('streak-info-text');
+  const countEl  = document.getElementById('streak-count');
+  const vipBadge = document.getElementById('vip-badge');
+
+  if(rewardRedeemed){
+    // Claimed state — reset visual, show confirmation
+    infoTxt.innerHTML  = '✓ You claimed this month\'s reward!';
+    infoTxt.style.color = '#34d399';
+    countEl.textContent = '0/4';
+    countEl.style.color = 'var(--text-3)';
+    vipBadge.classList.remove('show');
+  } else {
+    const isVIP = monthCount >= GOAL;
+    infoTxt.style.color = '';
+    infoTxt.textContent = isVIP
+      ? 'VIP reward ready — ' + monthCount + ' washes this month!'
+      : displayCount + ' of ' + GOAL + ' washes this month to unlock VIP Interior Cleaning';
+    countEl.textContent = displayCount + '/' + GOAL;
+    countEl.style.color = isVIP ? '#fbbf24' : '#34d399';
+    vipBadge.classList.toggle('show', isVIP);
+  }
+
+  infoRow.style.display = 'flex';
+}
+
+/* ================================================================
+   WASH HISTORY LIST
+================================================================ */
+function renderHistory(history){
+  const list = document.getElementById('history-list');
+  list.innerHTML = '';
+
+  // Show last 5 entries
+  const items = history.slice(0, 5);
+
+  if(!items.length){
+    list.innerHTML = `
+      <div class="history-empty">
+        <div class="history-empty-icon">🚗</div>
+        Your history will appear here after your first wash!
+      </div>`;
+    return;
+  }
+
+  items.forEach(entry=>{
+    const isRew = entry.isReward || entry.rewardRedeemed === 'Yes';
+    const type  = entry.washType || 'Standard Wash';
+    const time  = entry.formatted || entry.timestamp || '';
+
+    const item=document.createElement('div'); item.className='history-item';
+    item.innerHTML=`
+      <div class="hist-icon ${isRew?'hist-icon-reward':'hist-icon-standard'}">
+        ${isRew ? '🎁' : '🫧'}
+      </div>
+      <div class="hist-text">
+        <div class="hist-type">${type}</div>
+        <div class="hist-time">${time}</div>
+      </div>
+      ${isRew?'<span class="hist-badge hist-badge-reward">Reward</span>':''}
+    `;
+    list.appendChild(item);
+  });
+}
+
+/* ================================================================
+   ADMIN MODE — long-press header logo (1.5s)
+================================================================ */
+let adminPressTimer=null, adminPressCount=0;
+function startPress(){ adminPressTimer=setTimeout(activateAdmin,1500); }
+function endPress()  { clearTimeout(adminPressTimer); }
+function activateAdmin(){
+  adminPressCount++;
+  const p=document.getElementById('admin-panel');
+  if(adminPressCount%2===1){ p.classList.add('show'); toast('🔧 Admin mode on','inf',2000); }
+  else                      { p.classList.remove('show'); toast('Admin mode off','inf',1500); }
+}
+document.getElementById('header-logo').addEventListener('mousedown', startPress);
+document.getElementById('header-logo').addEventListener('touchstart',startPress,{passive:true});
+document.getElementById('header-logo').addEventListener('mouseup',   endPress);
+document.getElementById('header-logo').addEventListener('mouseleave',endPress);
+document.getElementById('header-logo').addEventListener('touchend',  endPress);
+
+function adminAddWash(){
+  if(!App.user){ toast('No user logged in','err'); return; }
+  L.log('[ADMIN] wash for', App.user.userID);
+  const prevStreak = App.stats?.monthlyStreak ?? 0;
+  api({action:'addWash', userID:App.user.userID})
+    .then(r=>{
+      L.log('[ADMIN] result',r);
+      if(!r.success){ toast(r.message||'Error','err'); return; }
+      App.set(r.user, r.stats);
+      renderDash(r.user, r.stats);
+      const newStreak = r.stats?.monthlyStreak ?? 0;
+      if(r.rewardEarned)                       toast('🎉 FREE WASH EARNED — 9-Wash Cycle Complete!','wow',5500);
+      else if(newStreak >= 4 && prevStreak < 4) toast('👑 VIP UNLOCKED — Free Interior Cleaning!','str',5500);
+      else                                      toast(r.message||'Wash recorded!','ok');
+    })
+    .catch(e=>{ L.error('[ADMIN] err',e); toast('Connection error','err'); });
+}
+
+/* ================================================================
+   INSTALL BANNER
+   Shows 2 s after load if:  not in standalone mode  AND  not dismissed
+================================================================ */
+(function initBanner(){
+  const isStandalone =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true ||
+    document.referrer.startsWith('android-app://');
+
+  if (isStandalone) return;
+
+  const DISMISSED_KEY = 'esg_banner_dismissed';
+
+  // Detect Safari on iOS (not Chrome/Firefox on iOS)
+  const ua       = navigator.userAgent;
+  const isIOS    = /iphone|ipad|ipod/i.test(ua);
+  const isSafari = isIOS && /safari/i.test(ua) && !/crios|fxios|opios|mercury/i.test(ua);
+
+  if (isSafari && !localStorage.getItem(DISMISSED_KEY)) {
+    // Update banner copy to be iOS-Safari specific with stronger CTA
+    const title = document.querySelector('.banner-title');
+    const body  = document.querySelector('.banner-body');
+    if (title) title.textContent = '📱 Install for the best experience on iPhone';
+    if (body)  body.innerHTML =
+      'Safari restricts this app. Tap the '
+      + '<span class="banner-share-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></span>'
+      + ' <strong>Share</strong> button → <strong>"Add to Home Screen"</strong> for full access. Or open in <strong>Chrome</strong>.';
+    setTimeout(() => { const b=document.getElementById('install-banner'); if(b) b.classList.add('visible'); }, 800);
+    return;
+  }
+
+  if (localStorage.getItem(DISMISSED_KEY)) return;
+  const banner = document.getElementById('install-banner');
+  setTimeout(() => banner && banner.classList.add('visible'), 2000);
+})();
+
+function dismissBanner() {
+  const banner = document.getElementById('install-banner');
+  if (!banner) return;
+  banner.classList.remove('visible');
+  localStorage.setItem('esg_banner_dismissed', '1');
+}
+
+/* ================================================================
+   MANAGER PORTAL LINK
+   Now on GitHub Pages, manager.html lives beside index.html.
+================================================================ */
+function openManagerPortal() {
+  const base = window.location.href.replace(/\/[^/]*$/, '/');
+  window.open(base + 'manager.html', '_blank');
+}
+
+/* ================================================================
+   INIT
+================================================================ */
+document.addEventListener('DOMContentLoaded', ()=>{
+  L.log('ESG App initialised');
+  // Warm up the API and ensure sheets exist
+  api({action:'setup'})
+    .then(r=>L.log('setup',r))
+    .catch(e=>L.warn('setup err — check API_URL is set correctly',e));
+});
+</script>
+</body>
+</html>
