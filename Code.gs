@@ -5,11 +5,14 @@
 
 var USERS_SHEET   = "Users";
 var WASHLOG_SHEET = "WashLog";
+var ADMIN_SHEET   = "Admin";      // Announcement text lives here
 var LEGACY_SHEET  = "Database";
 
-// Users columns (0-based)
-var U = { USERID:0, FULLNAME:1, PHONE:2, TOTAL:3, CYCLE:4, STATUS:5, SINCE:6 };
-var USERS_HDR = ["UserID","FullName","PhoneNumber","TotalLifetimeWashes","CurrentCycle","MemberStatus","MemberSince"];
+var STREAK_MAX = 9;               // Washes needed to earn a reward choice
+
+// Users columns (0-based) — Balance + Notes added at the end
+var U = { USERID:0, FULLNAME:1, PHONE:2, TOTAL:3, CYCLE:4, STATUS:5, SINCE:6, BALANCE:7, NOTES:8 };
+var USERS_HDR = ["UserID","FullName","PhoneNumber","TotalLifetimeWashes","CurrentCycle","MemberStatus","MemberSince","Balance","Notes"];
 
 // WashLog columns (0-based)
 var W = { TIMESTAMP:0, USERID:1, WASHTYPE:2, REWARD:3 };
@@ -67,6 +70,8 @@ function handleRequest_(d) {
       case "verifyPin":       return jsonOut_(verifyManagerPin(String(d.pin || "")));
       case "setPin":          return jsonOut_(setManagerPin(d.currentPin, d.newPin));
       case "getAppUrl":       return jsonOut_({ success:true, url:getAppUrl() });
+      case "getAppConfig":    return jsonOut_(getAppConfig());
+      case "claimReward":     return jsonOut_(claimReward(d.userId, d.rewardChoice));
       default:                return jsonOut_({ success:false, message:"Unknown action: " + action });
     }
   } catch(err) {
@@ -95,6 +100,15 @@ function setup() {
       wl.setColumnWidth(1, 200);
       wl.setColumnWidths(2, WASHLOG_HDR.length - 1, 160);
       created.push("WashLog");
+    }
+
+    // Admin sheet (announcement text in A2)
+    if (!ss.getSheetByName(ADMIN_SHEET)) {
+      var adm = ss.insertSheet(ADMIN_SHEET);
+      adm.getRange("A1").setValue("Announcement");
+      adm.getRange("A2").setValue("Welcome to ESG Car Wash! Visit us today.");
+      styleHeader_(adm, 1, "#f59e0b");
+      created.push("Admin");
     }
 
     // Seed default PIN if not set
@@ -270,7 +284,7 @@ function registerUser(payload) {
     if (!ss.getSheetByName(USERS_SHEET)) setup();
     var users = ss.getSheetByName(USERS_SHEET);
     var check = checkUser(payload.phone);
-    if (check.found) return { success:false, message:"This phone number is already registered." };
+    if (check.found) return { success:false, code:"PHONE_EXISTS", message:"This phone number is already registered." };
     var userID = generateUserID_(users);
     var since  = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "MMMM yyyy");
     users.appendRow([userID, payload.fullName, payload.phone, 0, 0, "Active", since]);
@@ -380,13 +394,13 @@ function logWash_(uid, requestedType) {
       message      = "Free wash redeemed! New cycle started.";
     } else {
       cycle++;
-      if (cycle >= 9) {
-        cycle        = 9;
+      if (cycle >= STREAK_MAX) {
+        cycle        = STREAK_MAX;
         status       = "Reward Available";
         rewardEarned = true;
-        message      = "9-Wash cycle complete! Free wash earned.";
+        message      = "Streak complete! Choose your reward.";
       } else {
-        message = "Wash recorded. " + (9 - cycle) + " more to free wash.";
+        message = "Wash recorded. " + (STREAK_MAX - cycle) + " more to reward.";
       }
     }
 
@@ -407,7 +421,7 @@ function logWash_(uid, requestedType) {
 function redeemMonthlyReward_(uid) {
   var stats = getUserStats(uid);
   if (!stats || stats.monthlyStreak < 4)
-    return { success:false, message:"Monthly streak requirement not met (" + (stats ? stats.monthlyStreak : 0) + "/4)." };
+    return { success:false, code:"STREAK_LOW", message:"Monthly streak requirement not met (" + (stats ? stats.monthlyStreak : 0) + "/4)." };
   if (stats.monthlyRewardRedeemed)
     return { success:false, message:"Monthly Interior Cleaning already redeemed this month." };
 
@@ -442,8 +456,74 @@ function rowToUser_(row) {
     totalWashes: parseInt(row[U.TOTAL]) || 0,
     currentCycle:parseInt(row[U.CYCLE]) || 0,
     memberStatus:String(row[U.STATUS]   || "Active"),
-    memberSince: String(row[U.SINCE]    || "")
+    memberSince: String(row[U.SINCE]    || ""),
+    balance:     parseInt(row[U.BALANCE]) || 0,
+    notes:       String(row[U.NOTES]    || ""),
+    streakMax:   STREAK_MAX
   };
+}
+
+// ─── getAppConfig ─────────────────────────────────────────────
+// Returns announcement text from Admin sheet cell A2.
+function getAppConfig() {
+  try {
+    var ss   = SpreadsheetApp.getActiveSpreadsheet();
+    var adm  = ss.getSheetByName(ADMIN_SHEET);
+    var text = "";
+    if (adm && adm.getLastRow() >= 2) {
+      text = String(adm.getRange("A2").getValue() || "");
+    }
+    return { success:true, announcementText:text, streakMax:STREAK_MAX };
+  } catch(e) {
+    return { success:false, announcementText:"", streakMax:STREAK_MAX, error:e.message };
+  }
+}
+
+// ─── claimReward ─────────────────────────────────────────────
+// rewardChoice: "NANO_WAX" | "HALF_OFF_DETAIL" | "FREE_WASH"
+function claimReward(userId, rewardChoice) {
+  try {
+    var VALID = ["NANO_WAX","HALF_OFF_DETAIL","FREE_WASH"];
+    if (!userId)                       return { success:false, code:"MISSING_ID",     message:"Missing userId." };
+    if (VALID.indexOf(rewardChoice)<0) return { success:false, code:"INVALID_REWARD", message:"Invalid reward choice." };
+
+    var ss    = SpreadsheetApp.getActiveSpreadsheet();
+    var users = ss.getSheetByName(USERS_SHEET);
+    var wlog  = ss.getSheetByName(WASHLOG_SHEET);
+    if (!users) return { success:false, message:"Users sheet not found." };
+
+    var data = users.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][U.USERID]) !== String(userId)) continue;
+
+      var balance = (parseInt(data[i][U.BALANCE]) || 0) + 1;
+      var rowNum  = i + 1;
+
+      users.getRange(rowNum, U.CYCLE   + 1).setValue(0);
+      users.getRange(rowNum, U.STATUS  + 1).setValue("Active");
+      users.getRange(rowNum, U.BALANCE + 1).setValue(balance);
+      users.getRange(rowNum, U.NOTES   + 1).setValue(rewardChoice);
+
+      if (wlog) wlog.appendRow([new Date(), userId, "Reward: " + rewardChoice, "Yes"]);
+
+      var updRow = data[i].slice();
+      updRow[U.CYCLE]   = 0;
+      updRow[U.STATUS]  = "Active";
+      updRow[U.BALANCE] = balance;
+      updRow[U.NOTES]   = rewardChoice;
+
+      return {
+        success:      true,
+        message:      "Reward claimed: " + rewardChoice,
+        rewardChoice: rewardChoice,
+        user:         rowToUser_(updRow),
+        stats:        getUserStats(userId)
+      };
+    }
+    return { success:false, code:"USER_NOT_FOUND", message:"User not found." };
+  } catch(e) {
+    return { success:false, message:e.message };
+  }
 }
 
 function generateUserID_(usersSheet) {

@@ -618,6 +618,24 @@ body::before {
 .manual-id-input::placeholder { color:var(--text-3); text-transform:none; letter-spacing:0; }
 
 /* ================================================================
+   LANGUAGE SWITCHER
+================================================================ */
+.lang-switcher {
+  display:inline-flex; align-items:center;
+  background:var(--card); backdrop-filter:blur(12px);
+  border:1px solid var(--border); border-radius:100px;
+  padding:3px 4px; gap:2px;
+}
+.lang-btn {
+  background:none; border:none; color:var(--text-3);
+  font-size:12px; font-weight:700; cursor:pointer;
+  padding:4px 8px; border-radius:100px;
+  transition:all .2s; font-family:var(--font); line-height:1;
+}
+.lang-btn.lang-active { background:rgba(245,158,11,.18); color:var(--mg); }
+#lang-pin { position:absolute; top:20px; right:20px; z-index:10; }
+
+/* ================================================================
    LANDSCAPE & SMALL SCREEN
 ================================================================ */
 @media (max-height: 500px) and (orientation: landscape) {
@@ -650,7 +668,7 @@ body::before {
     <div class="confirm-title" id="confirm-title">Confirm Action</div>
     <div class="confirm-sub"   id="confirm-sub">Are you sure?</div>
     <div class="confirm-btns">
-      <button class="btn btn-ghost" onclick="closeConfirm()">Cancel</button>
+      <button class="btn btn-ghost" onclick="closeConfirm()" data-i18n="btn.cancel">გაუქმება</button>
       <button class="btn btn-mg"    id="confirm-ok-btn" onclick="executeConfirmedAction()">Confirm</button>
     </div>
   </div>
@@ -659,12 +677,16 @@ body::before {
 <!-- ================================================================
      VIEW: PIN
 ================================================================ -->
-<div id="view-pin" class="view active">
+<div id="view-pin" class="view active" style="position:relative;">
+  <div class="lang-switcher" id="lang-pin">
+    <button class="lang-btn lang-active" data-lang="ge" onclick="setLanguage('ge')">🇬🇪 GE</button>
+    <button class="lang-btn"             data-lang="en" onclick="setLanguage('en')">🇬🇧 EN</button>
+  </div>
   <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:40px 24px;">
     <img src="https://drive.google.com/thumbnail?sz=w1000&id=1ldsE4D9iyiwK5zE2hdweZqGHvIehp336"
          alt="ESG" class="pin-logo" draggable="false">
-    <div class="pin-title">Manager Access</div>
-    <div class="pin-sub">Enter your 4-digit access code</div>
+    <div class="pin-title" data-i18n="pin.title">მენეჯერის წვდომა</div>
+    <div class="pin-sub"   data-i18n="pin.sub">შეიყვანეთ 4-ნიშნა კოდი</div>
 
     <div class="pin-dots" id="pin-dots">
       <div class="pin-dot" id="pd0"></div>
@@ -699,8 +721,12 @@ body::before {
   <header class="mgr-header">
     <img src="https://drive.google.com/thumbnail?sz=w1000&id=1ldsE4D9iyiwK5zE2hdweZqGHvIehp336"
          alt="ESG" class="mgr-header-logo" draggable="false">
-    <span class="mgr-badge">Manager</span>
-    <button class="mgr-logout" onclick="doMgrLogout()">Lock</button>
+    <span class="mgr-badge" data-i18n="badge.manager">მენეჯერი</span>
+    <div class="lang-switcher" style="margin-left:4px">
+      <button class="lang-btn" data-lang="ge" onclick="setLanguage('ge')">🇬🇪</button>
+      <button class="lang-btn" data-lang="en" onclick="setLanguage('en')">🇬🇧</button>
+    </div>
+    <button class="mgr-logout" onclick="doMgrLogout()" data-i18n="btn.lock">დაბლოკვა</button>
   </header>
 
   <div class="body-wrap">
@@ -709,7 +735,7 @@ body::before {
     <div class="card daily-card">
       <div class="daily-icon">🚗</div>
       <div class="daily-info">
-        <div class="daily-label">Today's Washes</div>
+        <div class="daily-label" data-i18n="daily.label">დღევანდელი რეცხვები</div>
         <div class="daily-count" id="daily-count">–</div>
         <div class="daily-sub"   id="daily-sub">Loading…</div>
       </div>
@@ -718,13 +744,13 @@ body::before {
     <!-- Scan CTA -->
     <div class="scan-cta">
       <button class="btn btn-mg btn-full" style="padding:18px;font-size:16px" onclick="openScanner()">
-        <span style="font-size:20px">⬡</span> Scan Client QR
+        <span style="font-size:20px">⬡</span> <span data-i18n="btn.scan">კლიენტის QR სკანირება</span>
       </button>
     </div>
 
     <!-- Feed -->
     <div class="card history-card">
-      <div class="section-label">Today's Scan Feed</div>
+      <div class="section-label" data-i18n="feed.label">დღევანდელი სკანირება</div>
       <div class="history-feed" id="history-feed">
         <div class="feed-empty">No scans yet today.</div>
       </div>
@@ -774,13 +800,13 @@ body::before {
   <header class="mgr-header">
     <img src="https://drive.google.com/thumbnail?sz=w1000&id=1ldsE4D9iyiwK5zE2hdweZqGHvIehp336"
          alt="ESG" class="mgr-header-logo" draggable="false">
-    <span class="mgr-badge">Scanner</span>
-    <button class="mgr-logout" onclick="cancelScan()">Cancel</button>
+    <span class="mgr-badge" data-i18n="badge.scanner">სკანერი</span>
+    <button class="mgr-logout" onclick="cancelScan()" data-i18n="btn.cancel">გაუქმება</button>
   </header>
 
   <div class="scanner-body">
     <div class="scanner-title-row">
-      <div class="scanner-title">Scan Member QR</div>
+      <div class="scanner-title" data-i18n="scanner.title">წევრის QR სკანირება</div>
     </div>
 
     <div class="camera-window">
@@ -808,7 +834,7 @@ body::before {
       </div>
     </div>
 
-    <p class="scanner-hint" id="scanner-hint">Position the member's QR code inside the frame.</p>
+    <p class="scanner-hint" id="scanner-hint" data-i18n="scanner.hint">კამერა მიუახლოვეთ QR კოდს. სკანირება ავტომატურია.</p>
     <p class="scanner-status looking" id="scan-status">Initialising camera…</p>
 
     <!-- Manual entry (fallback when camera unavailable) -->
@@ -839,8 +865,8 @@ body::before {
   <header class="mgr-header">
     <img src="https://drive.google.com/thumbnail?sz=w1000&id=1ldsE4D9iyiwK5zE2hdweZqGHvIehp336"
          alt="ESG" class="mgr-header-logo" draggable="false">
-    <span class="mgr-badge">Member</span>
-    <button class="mgr-logout" onclick="backToScanner()">Re-scan</button>
+    <span class="mgr-badge" data-i18n="badge.member">წევრი</span>
+    <button class="mgr-logout" onclick="backToScanner()" data-i18n="btn.rescan">ხელახლა სკანირება</button>
   </header>
 
   <div class="profile-body">
@@ -848,7 +874,7 @@ body::before {
     <div class="profile-header-row">
       <button class="profile-back-btn" onclick="backToDash()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-        Dashboard
+        <span data-i18n="btn.dashboard">დაფა</span>
       </button>
     </div>
 
@@ -891,7 +917,7 @@ body::before {
       <button class="btn-action wash-action" id="btn-std-wash" onclick="promptAction('standard')">
         <div class="action-icon">🫧</div>
         <div class="action-btn-inner">
-          <div class="action-btn-title">Confirm Standard Wash</div>
+          <div class="action-btn-title" data-i18n="action.wash.title">სტანდარტული რეცხვის დადასტურება</div>
           <div class="action-btn-sub" id="btn-std-sub">Records wash &amp; updates cycle</div>
         </div>
       </button>
@@ -899,7 +925,7 @@ body::before {
       <button class="btn-action vip-action" id="btn-vip" onclick="promptAction('monthly')" disabled>
         <div class="action-icon">👑</div>
         <div class="action-btn-inner">
-          <div class="action-btn-title">Redeem Monthly Interior</div>
+          <div class="action-btn-title" data-i18n="action.vip.title">VIP სალონის გამოყენება</div>
           <div class="action-btn-sub" id="btn-vip-sub">Requires 4 washes this month</div>
         </div>
       </button>
@@ -933,6 +959,78 @@ function api(data) {
   })
   .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
   .catch(err => { L.error('api', err); throw err; });
+}
+
+/* ================================================================
+   TRANSLATIONS (manager-specific + shared keys)
+================================================================ */
+const TM = {
+  ge: {
+    'pin.title':'მენეჯერის წვდომა', 'pin.sub':'შეიყვანეთ 4-ნიშნა კოდი',
+    'daily.label':'დღევანდელი რეცხვები',
+    'btn.scan':'კლიენტის QR სკანირება',
+    'feed.label':'დღევანდელი სკანირება', 'feed.empty':'სკანირება ჯერ არ ყოფილა.',
+    'badge.manager':'მენეჯერი', 'badge.scanner':'სკანერი', 'badge.member':'წევრი',
+    'btn.lock':'დაბლოკვა', 'btn.rescan':'ხელახლა სკანირება', 'btn.dashboard':'დაფა',
+    'scanner.title':'წევრის QR სკანირება',
+    'scanner.hint':'კამერა მიუახლოვეთ QR კოდს. სკანირება ავტომატურია.',
+    'scanner.ready':'📷  მზადაა — მიუახლოვეთ QR კოდს',
+    'action.wash.title':'სტანდარტული რეცხვის დადასტურება',
+    'action.vip.title':'VIP სალონის გამოყენება',
+    'btn.confirm':'დადასტურება', 'btn.cancel':'გაუქმება',
+    'confirm.wash.title':'სტანდარტული რეცხვა', 'confirm.vip.title':'სალონის წმენდა',
+    'err.pin.wrong':'არასწორი PIN. ხელახლა სცადეთ.', 'err.conn':'კავშირის შეცდომა.',
+    'wash.standard':'სტანდარტული რეცხვა', 'wash.free':'უფასო რეცხვა (ჯილდო)',
+    'wash.interior':'VIP სალონის წმენდა (ჯილდო)',
+    'toast.wash':'{left} რეცხვა უფასომდე',
+    'toast.free.cycle':'🎁 9-ციკლი დასრულდა! უფასო რეცხვა!',
+    'toast.vip.redeemed':'👑 VIP სალონის წმენდა — დამუშავდა!',
+    'toast.free.redeemed':'✓ უფასო რეცხვა გამოიყენა — ახალი ციკლი!',
+    'signage.label':'კლიენტის ნიშანი', 'signage.btn':'ნიშნის გენერაცია',
+  },
+  en: {
+    'pin.title':'Manager Access', 'pin.sub':'Enter your 4-digit access code',
+    'daily.label':'Today\'s Washes',
+    'btn.scan':'Scan Client QR',
+    'feed.label':'Today\'s Scan Feed', 'feed.empty':'No scans yet today.',
+    'badge.manager':'Manager', 'badge.scanner':'Scanner', 'badge.member':'Member',
+    'btn.lock':'Lock', 'btn.rescan':'Re-scan', 'btn.dashboard':'Dashboard',
+    'scanner.title':'Scan Member QR',
+    'scanner.hint':'Position the member\'s QR code inside the frame.',
+    'scanner.ready':'📷  Ready — point at member QR code',
+    'action.wash.title':'Confirm Standard Wash',
+    'action.vip.title':'Redeem Monthly Interior',
+    'btn.confirm':'Confirm', 'btn.cancel':'Cancel',
+    'confirm.wash.title':'Confirm Standard Wash', 'confirm.vip.title':'Redeem Interior Cleaning',
+    'err.pin.wrong':'Incorrect PIN. Try again.', 'err.conn':'Connection error.',
+    'wash.standard':'Standard Wash', 'wash.free':'Free Wash (Reward)',
+    'wash.interior':'Interior Cleaning (Monthly Reward)',
+    'toast.wash':'{left} more to free wash',
+    'toast.free.cycle':'🎁 Free wash cycle complete!',
+    'toast.vip.redeemed':'👑 Interior Cleaning redeemed!',
+    'toast.free.redeemed':'✓ Free wash redeemed — new cycle started!',
+    'signage.label':'Customer Signage', 'signage.btn':'Generate Customer Signage',
+  }
+};
+
+let currentLang = localStorage.getItem('esg_lang') || 'ge';
+
+function tr(key, vars) {
+  const lang = TM[currentLang] || TM.ge;
+  let s = lang[key] || TM.en[key] || key;
+  if (vars) Object.keys(vars).forEach(k => { s = s.replace('{'+k+'}', vars[k]); });
+  return s;
+}
+
+function setLanguage(lang) {
+  currentLang = lang;
+  localStorage.setItem('esg_lang', lang);
+  document.querySelectorAll('[data-lang]').forEach(b =>
+    b.classList.toggle('lang-active', b.dataset.lang === lang)
+  );
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.textContent = tr(el.getAttribute('data-i18n'));
+  });
 }
 
 /* ================================================================
@@ -1036,10 +1134,10 @@ function keySubmit() {
         updatePinDots();
         loadDashboard();
       } else {
-        pinError('Incorrect PIN. Try again.');
+        pinError(tr('err.pin.wrong'));
       }
     })
-    .catch(e=>{ pinError('Connection error.'); L.error(e); });
+    .catch(e=>{ pinError(tr('err.conn')); L.error(e); });
 }
 
 function pinError(msg) {
@@ -1491,7 +1589,7 @@ function handleLookupError(msg) {
   toast(msg,'err',4000);
   // Re-start scanner after 2.5s
   setTimeout(()=>{
-    document.getElementById('scan-status').textContent='Ready — point at QR code';
+    document.getElementById('scan-status').textContent=tr('scanner.ready');
     document.getElementById('scan-status').className='scanner-status looking';
     startQrScanner();
   }, 2600);
@@ -1648,14 +1746,14 @@ function executeConfirmedAction() {
       refreshDailyStats();
 
       if (type === 'monthly') {
-        toast('👑 Interior Cleaning redeemed for '+r.user.fullName+'!', 'wow', 5000);
+        toast(tr('toast.vip.redeemed'), 'wow', 5000);
       } else if (r.rewardEarned) {
-        toast('🎁 Free wash cycle complete for '+r.user.fullName+'!', 'inf', 5000);
+        toast(tr('toast.free.cycle'), 'inf', 5000);
       } else if (r.isRedemption) {
-        toast('✓ Free wash redeemed — new cycle started!', 'ok', 4000);
+        toast(tr('toast.free.redeemed'), 'ok', 4000);
       } else {
         const left = 9 - (parseInt(r.user.currentCycle)||0);
-        toast('✓ Wash recorded — '+left+' more to free wash', 'ok', 3500);
+        toast(tr('toast.wash', {left}), 'ok', 3500);
       }
     })
     .catch(e=>{
@@ -1672,6 +1770,7 @@ function executeConfirmedAction() {
 ================================================================ */
 document.addEventListener('DOMContentLoaded', ()=>{
   L.log('ESG Manager Portal ready');
+  setLanguage(currentLang);
   api({action:'setup'})
     .then(r=>L.log('setup',r))
     .catch(e=>L.warn('setup err — check API_URL is set correctly',e));
